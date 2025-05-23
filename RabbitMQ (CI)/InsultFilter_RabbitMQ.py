@@ -28,14 +28,14 @@ print("InsultFilter esperando textos que filtrar...")
 # Función de filtrado
 def callback(ch, method, properties, body):
     text = body.decode()
-    print(f"Texto recibido: {text}")
+    #print(f"Texto recibido: {text}")
     # Censurar insultos
     words = text.split()
     filtered = ["CENSORED" if word.lower() in insults else word for word in words]
     result = " ".join(filtered)
     # Guardar resultado en Redis
     redis_client.rpush(RESULTS_LIST, result)
-    print(f"Texto filtrado y guardado: {result}")
+    #print(f"Texto filtrado y guardado: {result}")
     # Confirmar recepción del mensaje
     ch.basic_ack(delivery_tag=method.delivery_tag)
 

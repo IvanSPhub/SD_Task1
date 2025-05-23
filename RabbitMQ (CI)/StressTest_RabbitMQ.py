@@ -16,7 +16,7 @@ redis_client.delete(RESULTS_LIST)
 # Mensaje ofensivo para filtrar
 message = "Tu lógica es tan estúpida que haría llorar a un retrasado"
 
-NUM_MESSAGES = 1000
+NUM_MESSAGES = 50000
 print(f"Enviando {NUM_MESSAGES} mensajes a text_queue...")
 
 start = time.time()
@@ -24,8 +24,8 @@ start = time.time()
 # Enviar mensajes a la cola
 for i in range(NUM_MESSAGES):
     channel.basic_publish(exchange='', routing_key='text_queue', body=message)
-    if i % 10 == 0 or i == NUM_MESSAGES - 1:
-        print(f"[{i}] mensaje enviado")
+    if i % 10000 == 0 or i == NUM_MESSAGES - 1:
+        print(f"[{i}] Mensaje enviado")
 end_send = time.time()
 
 # Esperar a que Redis tenga todos los resultados
@@ -45,7 +45,7 @@ print(f"Tiempo total hasta que todos fueron filtrados: {end - start:.2f} segundo
 print(f"Tiempo medio por mensaje (envío + filtrado): {(end - start)/NUM_MESSAGES:.4f} segundos")
 
 # ---- RESULTADOS ----
-# Mensajes enviados: 1000
-# Tiempo total de envío: 0.69 segundos
-# Tiempo total hasta que todos fueron filtrados: 5.23 segundos
-# Tiempo medio por mensaje (envío + filtrado): 0.0052 segundos
+# Mensajes enviados: 50000
+# Tiempo total de envío: 16.40 segundos
+# Tiempo total hasta que todos fueron filtrados: 194.84 segundos
+# Tiempo medio por mensaje (envío + filtrado): 0.0039 segundos

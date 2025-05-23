@@ -4,10 +4,10 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 # Configuración
 TEXT_QUEUE = "text_queue"
-NUM_MESSAGES = 10000
+NUM_MESSAGES = 25000
 INSULT = "Tu lógica es tan estúpida que haría llorar a un retrasado"
-THREADS = 200         # Número de threads a usar
-BATCH_SIZE = 100       # Mensajes por conexión
+THREADS = 5         # Número de threads a usar
+BATCH_SIZE = 55       # Mensajes por conexión
 NUM_BATCHES = NUM_MESSAGES // BATCH_SIZE
 
 # Enviar un lote de mensajes con una sola conexión

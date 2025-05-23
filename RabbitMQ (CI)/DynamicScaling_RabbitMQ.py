@@ -1,9 +1,7 @@
 import redis
 import multiprocessing
 import time
-import os
 import math
-import requests
 import pika
 import matplotlib.pyplot as plt
 
@@ -23,20 +21,17 @@ CAPACITY_PER_WORKER = 250
 # Cada cuántos ciclos imprimir el log aunque no haya cambios (evita spam)
 UNCHANGED_LIMIT = 100
 
-# Función para obtener el backlog real desde RabbitMQ vía HTTP API
+# Función para obtener el backlog
 def get_rabbitmq_backlog():
     try:
-        url = "http://localhost:15672/api/queues/%2F/text_queue"
-        auth = ("guest", "guest")  # Usuario y contraseña por defecto
-        response = requests.get(url, auth=auth)
-        if response.status_code == 200:
-            data = response.json()
-            return data["messages"]  # backlog real
-        else:
-            print(f"[Autoscaler] Error HTTP {response.status_code} al consultar RabbitMQ")
-            return 0
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+        queue = channel.queue_declare(queue=TEXT_QUEUE, passive=True)
+        message_count = queue.method.message_count
+        connection.close()
+        return message_count
     except Exception as e:
-        print(f"[Autoscaler] Error al conectar con RabbitMQ API: {e}")
+        print(f"[Autoscaler] Error al obtener backlog desde RabbitMQ: {e}")
         return 0
 
 # Función que representa un "InsultFilter". Se ejecuta como un proceso independiente (multiprocessing)
@@ -99,14 +94,23 @@ if __name__ == "__main__":
         while True:
             # Leer el tamaño actual de la cola de RabbitMQ
             current_backlog = get_rabbitmq_backlog()
+
             # Estimar la tasa de llegada (mensajes/segundo)
             current_time = time.time()
+            # Calcular cuánto ha cambiado el backlog
             delta_backlog = current_backlog - previous_backlog
             delta_time = current_time - previous_time
+            # Evitar divisiones por valores pequeños o negativos
             if delta_time < 0.5:
                 delta_time = 1.0
-            arrival_rate = delta_backlog / delta_time if delta_time > 0 else 0.1
-            arrival_rate = max(arrival_rate, 0.1)  # Evitar valores negativos o 0 (así hay 1 worker mínimo)
+            # Si la cola ha crecido, estimamos la tasa de llegada
+            if delta_backlog > 0:
+                arrival_rate = delta_backlog / delta_time
+            else:
+                # Si la cola ha disminuido, asumimos que los mensajes están siendo procesados
+                # pero fijamos un mínimo para evitar que se quede sin workers
+                arrival_rate = 0.1  # mínima estimada
+
             # Fórmula escalado dinámico basado en la cola de espera (backlog)
             # N = ceil((B + (λ * Tr)) / C)
             required_workers = min(MAX_WORKERS, math.ceil((current_backlog + arrival_rate * TARGET_RESPONSE_TIME) / CAPACITY_PER_WORKER))
@@ -134,13 +138,13 @@ if __name__ == "__main__":
                     p = multiprocessing.Process(target=insult_filter_worker)
                     p.start()
                     workers.append(p)
-                    # print(f"[Autoscaler] + Lanzado nuevo worker (Total: {len(workers)})")
+                    #print(f"[Autoscaler] + Lanzado nuevo worker (Total: {len(workers)})")
             # Si sobran workers → eliminarlos
             elif required_workers < current_workers:
                 for _ in range(current_workers - required_workers):
                     p = workers.pop()
                     p.terminate()
-                    # print(f"[Autoscaler] - Finalizado un worker (Total: {len(workers)})")
+                    #print(f"[Autoscaler] - Finalizado un worker (Total: {len(workers)})")
             
             # Ajustar el número de workers
             current_workers = len(workers)

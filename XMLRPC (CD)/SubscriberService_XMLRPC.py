@@ -8,8 +8,8 @@ def notify(insult):
     return "Notificación recibida."
 
 # Iniciar el servidor de suscriptor
-with SimpleXMLRPCServer(("localhost", 8002)) as server:
+with SimpleXMLRPCServer(("127.0.0.1", 8002)) as server:
     server.register_function(notify, 'notify')
 
-    print(f"SUBSCRIBERSERVICE -> SubscriberService corriendo en http://localhost:8002")
+    print(f"SUBSCRIBERSERVICE -> SubscriberService corriendo en http://127.0.0.1:8002")
     server.serve_forever()

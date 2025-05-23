@@ -9,23 +9,30 @@ filtered_list = "filtered_list"
 # Texto ofensivo de prueba
 insult = "Tu lógica es tan estúpida que haría llorar a un retrasado"
 
-# Número de peticiones a realizar
-NUM_MESSAGES = 1000
+# Número total de mensajes y tamaño del lote
+NUM_MESSAGES = 50000
+BATCH_SIZE = 1000
 
 # Limpiar resultados previos
 client.delete(filtered_list)
 
-print("Iniciando stress test en Redis (InsultFilter)...")
+print("Iniciando stress test en Redis (InsultFilter - 1 nodo)...")
 
 start_time = time.time()
 
-# Enviar mensajes a la cola
-for i in range(NUM_MESSAGES):
-    client.rpush(queue_name, insult)
-    if i % 10 == 0 or i == NUM_MESSAGES - 1:
-        print(f"[{i}] Mensaje enviado")
+# Enviar mensajes a la cola usando pipeline
+for i in range(0, NUM_MESSAGES, BATCH_SIZE):
+    pipe = client.pipeline()
+    for j in range(BATCH_SIZE):
+        if i + j >= NUM_MESSAGES:
+            break
+        pipe.rpush(queue_name, insult)
+    pipe.execute()
+    print(f"[{i + BATCH_SIZE}] mensajes enviados")
 
-# Esperar procesamiento
+end_send = time.time()
+
+# Esperar a que InsultFilter procese todos los mensajes
 print("Esperando a que InsultFilter procese todos los mensajes...")
 while True:
     processed = client.llen(filtered_list)
@@ -36,15 +43,20 @@ while True:
 end_time = time.time()
 
 # Resultados
-total_time = end_time - start_time
 print("\n---- RESULTADOS ----")
 print(f"Mensajes enviados: {NUM_MESSAGES}")
-print(f"Mensajes procesados: {client.llen(filtered_list)}")
-print(f"Tiempo total: {total_time:.2f} segundos")
-print(f"Tiempo medio por mensaje: {total_time / NUM_MESSAGES:.4f} segundos")
+print(f"Tiempo total de envío: {end_send - start_time:.2f} segundos")
+print(f"Tiempo total hasta que todos fueron filtrados: {end_time - start_time:.2f} segundos")
+print(f"Tiempo medio por mensaje (envío + filtrado): {(end_time - start_time)/NUM_MESSAGES:.4f} segundos")
 
 # ---- RESULTADOS ----
-# Mensajes enviados: 1000
-# Mensajes procesados: 1000
-# Tiempo total: 4.35 segundos
-# Tiempo medio por mensaje: 0.0043 segundos
+# Mensajes enviados: 50000
+# Tiempo total de envío: 93.09 segundos
+# Tiempo total hasta que todos fueron filtrados: 183.48 segundos
+# Tiempo medio por mensaje (envío + filtrado): 0.0037 segundos
+
+# ---- RESULTADOS ----
+# Mensajes enviados: 50000
+# Tiempo total de envío: 1.76 segundos
+# Tiempo total hasta que todos fueron filtrados: 162.88 segundos
+# Tiempo medio por mensaje (envío + filtrado): 0.0033 segundos

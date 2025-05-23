@@ -33,6 +33,7 @@ class InsultService:
 
     # Función para obtener un insulto aleatorio
     def insult_me(self):
+        #print("INSULTSERVICE -> Enviando insulto aleatorio...")
         return random.choice(self.insults) if self.insults else "No hay insultos disponibles."
 
     # Función para registrar suscriptores

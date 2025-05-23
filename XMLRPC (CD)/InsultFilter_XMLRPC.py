@@ -31,8 +31,8 @@ def get_filtered_texts():
     return filtered_texts
 
 # Iniciar el servidor XMLRPC
-with SimpleXMLRPCServer(('localhost', 8001), requestHandler=SimpleXMLRPCRequestHandler) as server:
+with SimpleXMLRPCServer(('127.0.0.1', 8001), requestHandler=SimpleXMLRPCRequestHandler) as server:
     server.register_function(filter_text, 'filter_text')
     server.register_function(get_filtered_texts, 'get_filtered_texts')
-    print("INSULTFILTER -> InsultFilter en ejecución en http://localhost:8001")
+    print("INSULTFILTER -> InsultFilter en ejecución en http://127.0.0.1:8001")
     server.serve_forever()

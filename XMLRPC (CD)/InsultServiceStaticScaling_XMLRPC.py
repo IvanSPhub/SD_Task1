@@ -7,6 +7,10 @@ import random
 import redis
 import sys
 
+class QuietRequestHandler(SimpleXMLRPCRequestHandler):
+    def log_message(self, format, *args):
+        pass  # Desactiva los logs HTTP
+
 # Obtener el puerto como argumento
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
@@ -18,8 +22,11 @@ class InsultService:
     def __init__(self):
         self.subscribers = {}
         self.running = True
+        self.cached_insults = []
 
-        # Hilo para difundir insultos automáticamente
+        # Iniciar hilos en segundo plano
+        self.updater_thread = threading.Thread(target=self.refresh_insult_cache, daemon=True)
+        self.updater_thread.start()
         self.broadcaster_thread = threading.Thread(target=self.insult_broadcaster, daemon=True)
         self.broadcaster_thread.start()
 
@@ -35,9 +42,12 @@ class InsultService:
         return redis_client.lrange(INSULT_LIST, 0, -1)
 
     def insult_me(self):
-        print("Enviando insulto aleatorio...")
-        insults = redis_client.lrange(INSULT_LIST, 0, -1)
-        return random.choice(insults) if insults else "No hay insultos disponibles."
+        if self.cached_insults:
+            #print("INSULTSERVICE -> Enviando insulto aleatorio...")
+            insult = random.choice(self.cached_insults)
+            return f"INSULTSERVICE[{PORT}] -> {insult}"
+        else:
+            return "No hay insultos disponibles."
 
     def add_subscriber(self, url):
         if url not in self.subscribers:
@@ -55,18 +65,29 @@ class InsultService:
 
     def insult_broadcaster(self):
         while self.running:
-            insults = redis_client.lrange(INSULT_LIST, 0, -1)
-            if insults and self.subscribers:
-                insult = random.choice(insults)
+            if self.cached_insults and self.subscribers:
+                insult = random.choice(self.cached_insults)
                 print(f"INSULTSERVICE[{PORT}] -> Difundiendo insulto: {insult}")
                 self.notify_subscribers(insult)
             time.sleep(5)
+    
+    def refresh_insult_cache(self):
+        while self.running:
+            # Actualiza la lista cacheada desde Redis
+            self.cached_insults = redis_client.lrange(INSULT_LIST, 0, -1)
+
+            if not self.cached_insults:
+                #print(f"[REFRESH] No hay insultos aún. Reintentando en 0.5 segundos...")
+                time.sleep(0.5)
+            else:
+                #print(f"[REFRESH] Caché actualizada con {len(self.cached_insults)} insultos. Próxima actualización en 30s.")
+                time.sleep(30)
 
 # Lanzar el servidor
-server = SimpleXMLRPCServer(('localhost', PORT), requestHandler=SimpleXMLRPCRequestHandler, allow_none=True)
+server = SimpleXMLRPCServer(('127.0.0.1', PORT), requestHandler=QuietRequestHandler, allow_none=True)
 service = InsultService()
 server.register_instance(service)
-print(f"INSULTSERVICE[{PORT}] -> Servidor corriendo en http://localhost:{PORT}")
+print(f"INSULTSERVICE[{PORT}] -> Servidor corriendo en http://127.0.0.1:{PORT}")
 server.serve_forever()
 
 # Stress test (múltiples nodos)

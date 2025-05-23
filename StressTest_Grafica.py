@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 
 # Resultados simulados
 sistemas = ["XMLRPC", "PyRO", "Redis", "RabbitMQ"]
-tiempos = [2038.45, 0.48, 4.35, 5.23]  # Sustituye tiempos totales
+tiempos = [56.00, 18.12, 162.88, 194.84]  # Sustituye tiempos totales
 
 # Crear gráfica
 plt.figure(figsize=(10, 6))
 plt.bar(sistemas, tiempos, color=["skyblue", "lightgreen", "orange", "salmon"])
-plt.title("Comparativa de rendimiento en un solo nodo (con 1000 mensajes)")
+plt.title("Comparativa de rendimiento en un solo nodo (con 50000 mensajes)")
 plt.ylabel("Tiempo (segundos)")
 plt.xlabel("Tecnología")
 plt.grid(axis="y")

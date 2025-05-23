@@ -4,11 +4,11 @@ import time
 # InsultClient envía nuevos insultos a InsultService cada 5 segundos.
 
 # Conectamos con InsultService
-insult_service = xmlrpc.client.ServerProxy("http://localhost:8000")
-insult_filter = xmlrpc.client.ServerProxy("http://localhost:8001")
+insult_service = xmlrpc.client.ServerProxy("http://127.0.0.1:8000")
+insult_filter = xmlrpc.client.ServerProxy("http://127.0.0.1:8001")
 # Registramos al cliente como suscriptor en InsultService
 print("INSULTCLIENT -> Registrando suscriptor en InsultService...")
-print(insult_service.add_subscriber("http://localhost:8002"))
+print(insult_service.add_subscriber("http://127.0.0.1:8002"))
 
 # Lista de insultos para agregar
 insults_to_add = [

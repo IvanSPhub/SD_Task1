@@ -25,14 +25,14 @@ while True:
     message = client.blpop(queue_name, timeout=0)
     if message:
         text = message[1]
-        print(f"Texto recibido: {text}")
+        #print(f"Texto recibido: {text}")
         # Censurar insultos
         words = text.split()
         filtered = ["CENSORED" if word.lower() in insult_words else word for word in words]
         result = " ".join(filtered)
         # Guardar el texto filtrado
         client.rpush(filtered_list, result)
-        print(f"Texto filtrado y guardado en la lista: {result}")
+        #print(f"Texto filtrado y guardado en la lista: {result}")
 
 # Desde la terminal donde ejecutamos "docker exec -it my-redis redis-cli":
 # get_filtered_texts() -> LRANGE filtered_list 0 -1

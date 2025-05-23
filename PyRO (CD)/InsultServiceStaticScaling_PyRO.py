@@ -6,33 +6,52 @@ import redis
 import sys
 
 @Pyro4.expose
-@Pyro4.behavior(instance_mode="single")  # Una sola instancia compartida
+@Pyro4.behavior(instance_mode="single")
 class InsultService:
     def __init__(self):
         self.redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
         self.insult_list = "INSULTS"
         self.subscribers = []
+        self.cached_insults = []
         self.running = True
 
-        # Iniciar hilo para difundir insultos cada 5s
-        self.thread = threading.Thread(target=self.insult_broadcaster, daemon=True)
-        self.thread.start()
+        # Hilo para refrescar insultos
+        self.refresh_thread = threading.Thread(target=self.refresh_insult_cache, daemon=True)
+        self.refresh_thread.start()
+        # Hilo para difundir insultos
+        self.broadcast_thread = threading.Thread(target=self.insult_broadcaster, daemon=True)
+        self.broadcast_thread.start()
+
+    def refresh_insult_cache(self):
+        while self.running:
+            insults = self.redis_client.lrange(self.insult_list, 0, -1)
+            self.cached_insults = insults
+
+            if not insults:
+                #print("[REFRESH] No hay insultos aún. Reintentando en 0.5s...")
+                time.sleep(0.5)
+            else:
+                #print(f"[REFRESH] {len(insults)} insultos cacheados. Próxima actualización en 30s.")
+                time.sleep(30)
 
     def add_insult(self, insult):
-        insults = self.redis_client.lrange(self.insult_list, 0, -1)
-        if insult not in insults:
+        existing = self.redis_client.lrange(self.insult_list, 0, -1)
+        if insult not in existing:
             self.redis_client.rpush(self.insult_list, insult)
             print(f"INSULTSERVICE -> Insulto agregado: {insult}")
             return "Insulto agregado con éxito."
         return "El insulto ya existe."
 
     def get_insults(self):
-        return self.redis_client.lrange(self.insult_list, 0, -1)
+        return self.cached_insults
 
     def insult_me(self):
-        print("Enviando insulto aleatorio...")
-        insults = self.redis_client.lrange(self.insult_list, 0, -1)
-        return random.choice(insults) if insults else "No hay insultos disponibles."
+        if self.cached_insults:
+            insult = random.choice(self.cached_insults)
+            #print(f"INSULTSERVICE -> Insulto enviado: {insult}")
+            return insult
+        else:
+            return "No hay insultos disponibles."
 
     def add_subscriber(self, observer_uri):
         observer = Pyro4.Proxy(observer_uri)
@@ -52,15 +71,14 @@ class InsultService:
 
     def insult_broadcaster(self):
         while self.running:
-            insults = self.redis_client.lrange(self.insult_list, 0, -1)
-            if insults and self.subscribers:
-                insult = random.choice(insults)
+            if self.cached_insults and self.subscribers:
+                insult = random.choice(self.cached_insults)
                 print(f"INSULTSERVICE -> Difundiendo insulto: {insult}")
                 self.notify_subscribers(insult)
             time.sleep(5)
 
 def main():
-    service_name = sys.argv[1]  # Por ejemplo: insult.service.1000
+    service_name = sys.argv[1] # Por ejemplo: insult.service.1000
     daemon = Pyro4.Daemon()
     ns = Pyro4.locateNS()
     uri = daemon.register(InsultService)

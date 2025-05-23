@@ -5,6 +5,10 @@ import threading
 import time
 import random
 
+class QuietRequestHandler(SimpleXMLRPCRequestHandler):
+    def log_message(self, format, *args):
+        pass  # Desactiva los logs HTTP
+
 # Servicio que puede recibir insultos de forma remota y almacenarlos en una lista (add_insult).
 # Ofrece mecanismos para:
 # - Recuperar toda la lista de insultos (get_insults).
@@ -33,7 +37,7 @@ class InsultService:
 
     # Función para obtener un insulto aleatorio
     def insult_me(self):
-        print("Enviando insulto aleatorio...")
+        #print("INSULTSERVICE -> Enviando insulto aleatorio...")
         return random.choice(self.insults) if self.insults else "INSULTSERVICE -> No hay insultos disponibles."
 
     # Función para registrar suscriptores
@@ -64,10 +68,10 @@ class InsultService:
             time.sleep(5)
 
 # Iniciar el servidor
-server = SimpleXMLRPCServer(('localhost', 8000), requestHandler=SimpleXMLRPCRequestHandler)
+server = SimpleXMLRPCServer(('127.0.0.1', 8000), requestHandler=QuietRequestHandler, allow_none=True)
 service = InsultService()
 server.register_instance(service)
-print("INSULTSERVICE -> InsultService corriendo en http://localhost:8000")
+print("INSULTSERVICE -> InsultService corriendo en http://127.0.0.1:8000")
 server.serve_forever()
 
 # Prueba unitaria
