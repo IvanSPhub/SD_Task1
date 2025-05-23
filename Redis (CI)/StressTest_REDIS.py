@@ -51,12 +51,6 @@ print(f"Tiempo medio por mensaje (envío + filtrado): {(end_time - start_time)/N
 
 # ---- RESULTADOS ----
 # Mensajes enviados: 50000
-# Tiempo total de envío: 93.09 segundos
-# Tiempo total hasta que todos fueron filtrados: 183.48 segundos
-# Tiempo medio por mensaje (envío + filtrado): 0.0037 segundos
-
-# ---- RESULTADOS ----
-# Mensajes enviados: 50000
 # Tiempo total de envío: 1.76 segundos
 # Tiempo total hasta que todos fueron filtrados: 162.88 segundos
 # Tiempo medio por mensaje (envío + filtrado): 0.0033 segundos
